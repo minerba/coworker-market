@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Icon, { type IconName } from "./Icon";
 
-const TABS = [
-  { href: "/", label: "홈", icon: "M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" },
-  { href: "/search", label: "탐색", icon: "M11 4a7 7 0 105.2 11.7l4 4 1.4-1.4-4-4A7 7 0 0011 4z" },
-  { href: "/sell", label: "등록", icon: "M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z", primary: true },
-  { href: "/chat", label: "채팅", icon: "M4 4h16a1 1 0 011 1v11a1 1 0 01-1 1H8l-5 4V5a1 1 0 011-1z" },
-  { href: "/my", label: "내 정보", icon: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0z" },
+const TABS: { href: string; label: string; icon: IconName; primary?: boolean }[] = [
+  { href: "/", label: "홈", icon: "home" },
+  { href: "/search", label: "탐색", icon: "search" },
+  { href: "/sell", label: "등록", icon: "plus", primary: true },
+  { href: "/chat", label: "채팅", icon: "chat" },
+  { href: "/my", label: "내 정보", icon: "user" },
 ];
 
 export default function BottomNav() {
@@ -28,9 +29,7 @@ export default function BottomNav() {
                       : `flex h-7 w-7 items-center justify-center ${active ? "text-brand" : "text-muted"}`
                   }
                 >
-                  <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current">
-                    <path d={t.icon} />
-                  </svg>
+                  <Icon name={t.icon} strokeWidth={t.primary ? 2.25 : active ? 2 : 1.75} />
                 </span>
                 <span className={`text-[11px] ${active ? "font-semibold text-brand" : "text-muted"}`}>
                   {t.label}
