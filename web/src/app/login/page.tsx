@@ -5,8 +5,7 @@ import { COMPANY_DOMAIN, supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [id, setId] = useState("");
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<"email" | "code">("email");
+  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -15,7 +14,7 @@ export default function LoginPage() {
   const full = typed.includes("@");
   const email = full ? typed : `${typed}@${COMPANY_DOMAIN}`;
 
-  async function sendCode(e: React.FormEvent) {
+  async function sendLink(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!/^[a-z0-9._+-]+(@[a-z0-9.-]+\.[a-z]{2,})?$/.test(typed)) {
@@ -23,25 +22,21 @@ export default function LoginPage() {
       return;
     }
     setBusy(true);
+    // emailRedirectTo를 생략하면 Supabase에 설정된 Site URL(배포 주소)로 돌아옵니다.
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: true },
     });
     setBusy(false);
     if (error) {
-      setError("인증 메일을 보내지 못했어요. 허용된 메일인지 확인하거나 잠시 후 다시 시도해 주세요.");
+      setError(
+        error.status === 429
+          ? "메일을 너무 자주 요청했어요. 잠시 후(최대 1시간) 다시 시도해 주세요."
+          : "로그인 메일을 보내지 못했어요. 허용된 메일인지 확인하거나 잠시 후 다시 시도해 주세요.",
+      );
       return;
     }
-    setStep("code");
-  }
-
-  async function verify(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setBusy(true);
-    const { error } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: "email" });
-    setBusy(false);
-    if (error) setError("인증 코드가 맞지 않거나 만료됐어요.");
+    setSent(true);
   }
 
   return (
@@ -56,8 +51,8 @@ export default function LoginPage() {
         동료들끼리만 쓰는 안전한 공간이에요.
       </p>
 
-      {step === "email" ? (
-        <form onSubmit={sendCode} className="mt-8 space-y-3">
+      {!sent ? (
+        <form onSubmit={sendLink} className="mt-8 space-y-3">
           <label className="block text-sm font-semibold">회사 메일</label>
           <div className="flex items-center rounded-2xl bg-card px-4 ring-1 ring-line focus-within:ring-2 focus-within:ring-brand">
             <input
@@ -76,42 +71,33 @@ export default function LoginPage() {
             disabled={busy || !id.trim()}
             className="w-full rounded-2xl bg-brand py-3.5 text-base font-bold text-white shadow-lg shadow-brand/30 transition active:scale-[0.99] disabled:opacity-50"
           >
-            {busy ? "보내는 중..." : "인증 코드 받기"}
+            {busy ? "보내는 중..." : "로그인 링크 받기"}
           </button>
         </form>
       ) : (
-        <form onSubmit={verify} className="mt-8 space-y-3">
-          <p className="text-sm text-muted">
-            <span className="font-semibold text-ink">{email}</span>로 보낸 코드를 입력해 주세요.
-          </p>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={10}
-            placeholder="인증 코드"
-            className="w-full rounded-2xl bg-card px-4 py-3.5 text-center text-2xl tracking-[0.35em] outline-none ring-1 ring-line focus:ring-2 focus:ring-brand"
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            disabled={busy || code.length < 6}
-            className="w-full rounded-2xl bg-brand py-3.5 text-base font-bold text-white shadow-lg shadow-brand/30 disabled:opacity-50"
-          >
-            {busy ? "확인 중..." : "확인"}
-          </button>
+        <div className="mt-8 space-y-3">
+          <div className="rounded-3xl border border-line bg-card p-5">
+            <p className="font-bold">메일을 보냈어요</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-muted">
+              <span className="font-semibold text-ink">{email}</span>로 보낸 메일을 열고,
+              <br />
+              <span className="font-semibold text-ink">로그인 링크</span>를 눌러 주세요.
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              링크는 한 번만 쓸 수 있어요. 메일이 보이지 않으면 스팸함도 확인해 주세요.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => {
-              setStep("email");
-              setCode("");
+              setSent(false);
               setError("");
             }}
             className="w-full py-2 text-sm text-muted"
           >
             메일 주소 다시 입력
           </button>
-        </form>
+        </div>
       )}
     </div>
   );
