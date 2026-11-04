@@ -25,6 +25,7 @@ export default function ItemCard({ item }: { item: Item }) {
             {[item.place, timeAgo(item.created_at)].filter(Boolean).join(" · ")}
           </p>
         </div>
+        <div className="flex items-center justify-between">
         {free ? (
           <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sage-soft px-2.5 py-0.5 text-sm font-bold text-sage">
             <Icon name="gift" className="h-4 w-4" />
@@ -33,6 +34,11 @@ export default function ItemCard({ item }: { item: Item }) {
         ) : (
           <span className="text-base font-bold">{won(item.price)}</span>
         )}
+        <span className="flex items-center gap-1 text-xs text-muted">
+          <Icon name="heart" className="h-3.5 w-3.5" />
+          {item.item_likes[0]?.count ?? 0}
+        </span>
+        </div>
       </div>
     </Link>
   );

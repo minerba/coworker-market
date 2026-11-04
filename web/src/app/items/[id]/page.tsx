@@ -15,6 +15,9 @@ export default function ItemDetail() {
   const router = useRouter();
   const { session } = useAuth();
   const [item, setItem] = useState<Item | null | undefined>(undefined);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [chatBusy, setChatBusy] = useState(false);
 
   useEffect(() => {
     supabase
@@ -22,11 +25,61 @@ export default function ItemDetail() {
       .select(ITEM_COLUMNS)
       .eq("id", id)
       .maybeSingle()
-      .then(({ data }) => setItem((data as unknown as Item) ?? null));
+      .then(({ data }) => {
+        const found = (data as unknown as Item) ?? null;
+        setItem(found);
+        setLikeCount(found?.item_likes[0]?.count ?? 0);
+      });
   }, [id]);
 
   const free = item?.price === 0;
   const mine = !!item && session?.user.id === item.seller_id;
+
+  useEffect(() => {
+    if (!item || !session) return;
+    supabase
+      .from("item_likes")
+      .select("item_id")
+      .eq("item_id", item.id)
+      .eq("user_id", session.user.id)
+      .maybeSingle()
+      .then(({ data }) => setLiked(!!data));
+  }, [item, session]);
+
+  async function toggleLike() {
+    if (!item || !session) return;
+    const next = !liked;
+    setLiked(next);
+    setLikeCount((c) => c + (next ? 1 : -1));
+    const { error } = next
+      ? await supabase.from("item_likes").insert({ item_id: item.id })
+      : await supabase.from("item_likes").delete().eq("item_id", item.id).eq("user_id", session.user.id);
+    if (error) {
+      setLiked(!next);
+      setLikeCount((c) => c + (next ? -1 : 1));
+    }
+  }
+
+  async function startChat() {
+    if (!item || !session || chatBusy) return;
+    setChatBusy(true);
+    const existing = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("item_id", item.id)
+      .eq("buyer_id", session.user.id)
+      .maybeSingle();
+    let roomId = existing.data?.id;
+    if (!roomId) {
+      const created = await supabase.from("conversations").insert({ item_id: item.id }).select("id").single();
+      if (created.error) {
+        setChatBusy(false);
+        return alert("채팅을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
+      roomId = created.data.id;
+    }
+    router.push(`/chat/${roomId}`);
+  }
 
   async function changeStatus(status: Status) {
     if (!item || status === item.status) return;
@@ -136,12 +189,26 @@ export default function ItemDetail() {
           )}
 
           <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-line bg-card/95 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
-            <button
-              disabled
-              className="w-full rounded-2xl bg-brand py-3.5 text-base font-bold text-white opacity-50"
-            >
-              {mine ? "내가 올린 글이에요" : "채팅하기 (준비 중)"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleLike}
+                aria-label={liked ? "관심 해제" : "관심 등록"}
+                aria-pressed={liked}
+                className={`flex h-12 w-14 shrink-0 flex-col items-center justify-center rounded-2xl ring-1 ring-line ${
+                  liked ? "bg-brand-soft text-brand-dark" : "bg-card text-muted"
+                }`}
+              >
+                <Icon name="heart" className={`h-5 w-5 ${liked ? "fill-current" : ""}`} />
+                <span className="text-[10px] leading-none">{likeCount}</span>
+              </button>
+              <button
+                onClick={startChat}
+                disabled={mine || chatBusy || item.status === "sold"}
+                className="flex-1 rounded-2xl bg-brand py-3.5 text-base font-bold text-white disabled:opacity-50"
+              >
+                {mine ? "내가 올린 글이에요" : item.status === "sold" ? "거래가 끝났어요" : "채팅하기"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

@@ -14,7 +14,7 @@ const TABS: { href: string; label: string; icon: IconName; primary?: boolean }[]
 
 export default function BottomNav() {
   const pathname = usePathname();
-  if (pathname === "/login" || pathname.startsWith("/items/") || pathname === "/sell") return null;
+  if (pathname === "/login" || pathname.startsWith("/items/") || pathname === "/sell" || pathname.startsWith("/chat/")) return null;
   return (
     <nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-md -translate-x-1/2 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       <ul className="flex items-end justify-around px-2 pt-2 pb-2">

@@ -16,10 +16,11 @@ export type Item = {
   image_urls: string[];
   created_at: string;
   profiles: { nickname: string } | null;
+  item_likes: { count: number }[];
 };
 
 export const ITEM_COLUMNS =
-  "id, seller_id, title, description, price, category, place, status, image_urls, created_at, profiles(nickname)";
+  "id, seller_id, title, description, price, category, place, status, image_urls, created_at, profiles(nickname), item_likes(count)";
 
 export const STATUS_LABEL: Record<Status, string> = {
   selling: "판매중",
