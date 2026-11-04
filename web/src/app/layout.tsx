@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import AuthProvider from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "코워커마켓",
@@ -18,8 +19,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body className="min-h-dvh">
         <div className="relative mx-auto min-h-dvh w-full max-w-md bg-cream shadow-[0_0_40px_rgba(120,90,50,0.12)]">
-          <main className="pb-24">{children}</main>
-          <BottomNav />
+          <AuthProvider>
+            <main className="pb-24">{children}</main>
+            <BottomNav />
+          </AuthProvider>
         </div>
       </body>
     </html>
