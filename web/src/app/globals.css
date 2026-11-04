@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #fffaf3;
+  --card: #ffffff;
+  --sand: #f5ece0;
+  --line: #eadfce;
+  --ink: #3b2f27;
+  --muted: #8c7b6c;
+  --brand: #f08a4b;
+  --brand-dark: #d9702f;
+  --brand-soft: #fde6d3;
+  --sage: #7fa88a;
+  --sage-soft: #e3efe6;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-card: var(--card);
+  --color-sand: var(--sand);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-soft: var(--brand-soft);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR",
+    "Malgun Gothic", system-ui, sans-serif;
+}
+
+html {
+  background: #efe5d6;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}

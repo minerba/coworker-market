@@ -1,0 +1,38 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
+
+const AuthContext = createContext<{ session: Session | null }>({ session: null });
+export const useAuth = () => useContext(AuthContext);
+
+export default function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [ready, setReady] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setReady(true);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const isLogin = pathname === "/login";
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!session && !isLogin) router.replace("/login");
+    if (session && isLogin) router.replace("/");
+  }, [ready, session, isLogin, router]);
+
+  if (!ready || (!session && !isLogin)) {
+    return <div className="min-h-dvh" aria-busy="true" />;
+  }
+  return <AuthContext.Provider value={{ session }}>{children}</AuthContext.Provider>;
+}
