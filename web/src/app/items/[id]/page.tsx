@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
+import { useAuth } from "@/components/AuthProvider";
 import ItemThumb from "@/components/ItemThumb";
 import { supabase } from "@/lib/supabase";
-import { ITEM_COLUMNS, STATUS_LABEL, timeAgo, won, type Item } from "@/lib/items";
+import { storagePathFromUrl, BUCKET } from "@/lib/image";
+import { ITEM_COLUMNS, STATUS_LABEL, timeAgo, won, type Item, type Status } from "@/lib/items";
 
 export default function ItemDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { session } = useAuth();
   const [item, setItem] = useState<Item | null | undefined>(undefined);
 
   useEffect(() => {
@@ -22,11 +26,34 @@ export default function ItemDetail() {
   }, [id]);
 
   const free = item?.price === 0;
+  const mine = !!item && session?.user.id === item.seller_id;
+
+  async function changeStatus(status: Status) {
+    if (!item || status === item.status) return;
+    const { error } = await supabase.from("items").update({ status }).eq("id", item.id);
+    if (!error) setItem({ ...item, status });
+  }
+
+  async function remove() {
+    if (!item || !confirm("이 게시글을 삭제할까요? 되돌릴 수 없어요.")) return;
+    const { error } = await supabase.from("items").delete().eq("id", item.id);
+    if (error) return alert("삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    const paths = item.image_urls.map(storagePathFromUrl).filter((p): p is string => !!p);
+    if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+    router.replace("/");
+  }
 
   return (
     <div>
       <div className="relative">
-        {item ? (
+        {item && item.image_urls.length > 1 ? (
+          <div className="no-scrollbar flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto">
+            {item.image_urls.map((u) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={u} src={u} alt={item.title} className="h-full w-full shrink-0 snap-center object-cover" />
+            ))}
+          </div>
+        ) : item ? (
           <ItemThumb item={item} className="aspect-[4/3] w-full" iconClass="h-20 w-20" />
         ) : (
           <div className="aspect-[4/3] w-full animate-pulse bg-sand" />
@@ -81,12 +108,39 @@ export default function ItemDetail() {
             </p>
           </div>
 
+          {mine && (
+            <div className="mt-6 rounded-3xl border border-line bg-card p-4">
+              <p className="text-sm font-semibold">거래 상태</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {(Object.keys(STATUS_LABEL) as Status[]).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => changeStatus(st)}
+                    className={`rounded-xl py-2 text-sm font-medium ring-1 ${
+                      item.status === st ? "bg-ink text-white ring-ink" : "bg-cream text-ink ring-line"
+                    }`}
+                  >
+                    {STATUS_LABEL[st]}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Link href={`/items/${item.id}/edit`} className="flex-1 rounded-xl bg-sand py-2.5 text-center text-sm font-semibold">
+                  수정
+                </Link>
+                <button onClick={remove} className="flex-1 rounded-xl bg-sand py-2.5 text-sm font-semibold text-red-600">
+                  삭제
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-line bg-card/95 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
             <button
               disabled
               className="w-full rounded-2xl bg-brand py-3.5 text-base font-bold text-white opacity-50"
             >
-              채팅하기 (준비 중)
+              {mine ? "내가 올린 글이에요" : "채팅하기 (준비 중)"}
             </button>
           </div>
         </div>

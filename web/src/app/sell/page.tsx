@@ -1,8 +1,11 @@
-export default function Page() {
+import ItemForm from "@/components/ItemForm";
+import PageHeader from "@/components/PageHeader";
+
+export default function SellPage() {
   return (
-    <div className="flex min-h-[70dvh] flex-col items-center justify-center gap-2 px-5 text-center">
-      <h1 className="text-lg font-bold">물건 등록</h1>
-      <p className="text-sm text-muted">곧 만나요. 준비 중이에요!</p>
-    </div>
+    <>
+      <PageHeader title="물건 등록" />
+      <ItemForm />
+    </>
   );
 }
