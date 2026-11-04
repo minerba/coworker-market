@@ -10,13 +10,16 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const email = `${id.trim().toLowerCase()}@${COMPANY_DOMAIN}`;
+  // 아이디만 입력하면 회사 도메인을 붙이고, 전체 주소를 입력하면 그대로 사용 (허용 여부는 DB가 최종 판단)
+  const typed = id.trim().toLowerCase();
+  const full = typed.includes("@");
+  const email = full ? typed : `${typed}@${COMPANY_DOMAIN}`;
 
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!/^[a-z0-9._-]+$/.test(id.trim().toLowerCase())) {
-      setError("메일 아이디를 확인해 주세요. (@ 앞부분만 입력)");
+    if (!/^[a-z0-9._+-]+(@[a-z0-9.-]+\.[a-z]{2,})?$/.test(typed)) {
+      setError("메일 주소를 확인해 주세요.");
       return;
     }
     setBusy(true);
@@ -26,7 +29,7 @@ export default function LoginPage() {
     });
     setBusy(false);
     if (error) {
-      setError("인증 메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setError("인증 메일을 보내지 못했어요. 허용된 메일인지 확인하거나 잠시 후 다시 시도해 주세요.");
       return;
     }
     setStep("code");
@@ -66,7 +69,7 @@ export default function LoginPage() {
               placeholder="메일 아이디"
               className="min-w-0 flex-1 bg-transparent py-3.5 text-base outline-none placeholder:text-muted/60"
             />
-            <span className="text-base text-muted">@{COMPANY_DOMAIN}</span>
+            {!full && <span className="text-base text-muted">@{COMPANY_DOMAIN}</span>}
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
