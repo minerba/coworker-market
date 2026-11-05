@@ -34,12 +34,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!session) return;
-    supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", session.user.id)
-      .single()
-      .then(({ data }) => setAdmin(!!data?.is_admin));
+    supabase.rpc("is_admin").then(({ data }) => setAdmin(data === true));
   }, [session]);
 
   const load = useCallback(async () => {

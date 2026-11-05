@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // 다른 사이트가 이 앱을 프레임으로 감싸 클릭을 가로채는 것을 방지
+          { key: "X-Frame-Options", value: "DENY" },
+          // 이 앱이 쓰지 않는 기기 기능은 브라우저 차원에서 차단
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
       {

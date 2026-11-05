@@ -46,7 +46,7 @@ supabase/functions   서버 함수 (send-push: 웹 푸시 발송)
 
 1. **테스트용 예외 메일 제거**: `allowed_emails`에 테스트용 개인 메일이 들어 있습니다. 실제 오픈 전에 삭제하세요.
    `delete from public.allowed_emails where note like '%테스트%';`
-2. **관리자 추가**: `insert into public.admin_emails (email) values ('someone@samsung.com');` (소문자). 해당 사용자가 다시 로그인하면 반영됩니다.
+2. **관리자 추가**: `insert into public.admin_emails (email) values ('user@example.com');` (소문자). 해당 사용자가 다시 로그인하면 반영됩니다.
 3. **허용 도메인 추가**: `insert into public.allowed_email_domains (domain) values ('example.com');`
 
 ## 인증

@@ -81,6 +81,7 @@ create trigger notifications_send_push
 
 -- 발송 함수 호출용 공유 비밀값은 DB 안에서 무작위로 생성 (코드나 대화에 값이 나타나지 않음)
 -- VAPID 키는 send-push 함수가 첫 호출 때 스스로 만들어 이 테이블에 저장
+-- vapid_subject의 실제 연락처 값은 운영 DB에서 직접 설정 (저장소에는 실제 이메일 주소를 두지 않음)
 insert into public.push_config (key, value)
 values ('push_secret', encode(extensions.gen_random_bytes(32), 'hex'))
 on conflict (key) do nothing;
@@ -88,5 +89,5 @@ insert into public.push_config (key, value)
 values ('push_function_url', 'https://ivlgxwzlxoianqebvlbw.supabase.co/functions/v1/send-push')
 on conflict (key) do nothing;
 insert into public.push_config (key, value)
-values ('vapid_subject', 'mailto:trouvaille0922@gmail.com')
+values ('vapid_subject', 'mailto:admin@example.com')
 on conflict (key) do nothing;

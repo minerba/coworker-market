@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { COMPANY_DOMAIN, supabase } from "@/lib/supabase";
 
 type Mode = "password" | "code";
@@ -213,6 +214,17 @@ export default function LoginPage() {
           </button>
         </form>
       )}
+      <p className="mt-8 text-center text-xs leading-relaxed text-muted">
+        회사와 무관한 임직원 사설 서비스예요. 로그인하면{" "}
+        <Link href="/terms" className="underline">
+          이용약관
+        </Link>
+        과{" "}
+        <Link href="/privacy" className="underline">
+          개인정보 처리방침
+        </Link>
+        을 확인하게 돼요.
+      </p>
     </div>
   );
 }
