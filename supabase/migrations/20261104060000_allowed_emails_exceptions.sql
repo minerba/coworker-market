@@ -6,7 +6,8 @@ create table public.allowed_emails (
 );
 alter table public.allowed_emails enable row level security;
 -- 정책 없음: 클라이언트는 접근 불가, 가입 트리거(security definer)만 조회
-insert into public.allowed_emails (email, note) values ('proability@naver.com', '테스트용 임시 허용');
+-- 예외 허용 메일은 운영 DB에 직접 추가합니다 (저장소에는 실제 이메일 주소를 두지 않음):
+--   insert into public.allowed_emails (email, note) values ('tester@example.com', '테스트용 임시 허용');
 
 create or replace function public.enforce_allowed_email_domain()
 returns trigger

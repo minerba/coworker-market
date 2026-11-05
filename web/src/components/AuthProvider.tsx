@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { mutate } from "swr";
 import type { Session } from "@supabase/supabase-js";
+import { PUBLIC_PATHS } from "@/lib/legal";
 import { supabase } from "@/lib/supabase";
 
 const AuthContext = createContext<{ session: Session | null }>({ session: null });
@@ -29,14 +30,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const isLogin = pathname === "/login";
+  const isPublic = PUBLIC_PATHS.includes(pathname);
 
   useEffect(() => {
     if (!ready) return;
-    if (!session && !isLogin) router.replace("/login");
+    if (!session && !isPublic) router.replace("/login");
     if (session && isLogin) router.replace("/");
-  }, [ready, session, isLogin, router]);
+  }, [ready, session, isLogin, isPublic, router]);
 
-  if (!ready || (!session && !isLogin)) {
+  if (!ready || (!session && !isPublic)) {
     return (
       <div className="flex min-h-dvh items-center justify-center" aria-busy="true">
         <span className="text-2xl font-extrabold tracking-tight">

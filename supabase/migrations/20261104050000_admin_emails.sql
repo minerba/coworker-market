@@ -3,7 +3,8 @@ create table public.admin_emails (
 );
 alter table public.admin_emails enable row level security;
 -- 정책 없음: 클라이언트는 접근 불가, 가입 트리거(security definer)만 조회
-insert into public.admin_emails (email) values ('jin0.bang@samsung.com');
+-- 관리자 메일은 운영 DB에 직접 추가합니다 (저장소에는 실제 이메일 주소를 두지 않음):
+--   insert into public.admin_emails (email) values ('admin@example.com');
 
 create or replace function public.handle_new_user()
 returns trigger

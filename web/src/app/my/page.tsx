@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import useSWR, { mutate as globalMutate } from "swr";
 import { useAuth } from "@/components/AuthProvider";
 import InstallBanner from "@/components/InstallBanner";
 import { useNotifications } from "@/components/NotificationProvider";
+import { deleteMyAccount, exportMyData } from "@/lib/account";
 import { unsubscribePush } from "@/lib/push";
 import { fetchBlockedIds } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 
-type Profile = { nickname: string; building: string | null; is_admin: boolean };
+type Profile = { nickname: string; building: string | null };
 type Blocked = { blocked_id: string; profiles: { nickname: string } | null };
 
 const input =
@@ -23,9 +25,14 @@ export default function MyPage() {
   const { permission, requestPermission, pushState } = useNotifications();
 
   const { data: profile, mutate: mutateProfile } = useSWR(uid ? ["profile", uid] : null, async () => {
-    const { data } = await supabase.from("profiles").select("nickname, building, is_admin").eq("id", uid!).single();
+    const { data } = await supabase.from("profiles").select("nickname, building").eq("id", uid!).single();
     return data as Profile | null;
   });
+  const { data: isAdmin } = useSWR(uid ? ["is-admin", uid] : null, async () => {
+    const { data } = await supabase.rpc("is_admin");
+    return data === true;
+  });
+  const router = useRouter();
   const { data: blocks, mutate: mutateBlocks } = useSWR(uid ? ["blocklist", uid] : null, async () => {
     const { data } = await supabase.from("user_blocks").select("blocked_id, profiles!user_blocks_blocked_id_fkey(nickname)");
     return (data as unknown as Blocked[]) ?? [];
@@ -56,6 +63,13 @@ export default function MyPage() {
     // 닉네임이 보이는 목록들도 새로 받도록
     globalMutate((key) => Array.isArray(key) && ["items", "item", "rooms", "mine", "likes"].includes(key[0] as string));
   }
+
+  // 개인정보(내려받기/탈퇴)
+  const [dataMsg, setDataMsg] = useState("");
+  const [leaving, setLeaving] = useState(false);
+  const [leaveText, setLeaveText] = useState("");
+  const [leaveBusy, setLeaveBusy] = useState(false);
+  const [leaveMsg, setLeaveMsg] = useState("");
 
   // 비밀번호
   const [pw, setPw] = useState("");
@@ -101,7 +115,7 @@ export default function MyPage() {
         {profile?.building && <p className="mt-1 text-sm text-muted">{profile.building}</p>}
       </div>
 
-      {profile?.is_admin && (
+      {isAdmin && (
         <Link href="/admin" className="mt-3 block rounded-2xl bg-ink py-3.5 text-center text-sm font-semibold text-white">
           관리자 · 신고 처리
         </Link>
@@ -194,6 +208,27 @@ export default function MyPage() {
         </ul>
       )}
 
+      <h2 className="mt-8 text-base font-bold">개인정보</h2>
+      <div className="mt-2 space-y-2">
+        <Link href="/terms" className={row}>
+          이용약관 <span className="text-muted">›</span>
+        </Link>
+        <Link href="/privacy" className={row}>
+          개인정보 처리방침 <span className="text-muted">›</span>
+        </Link>
+        <button
+          onClick={async () => {
+            setDataMsg("");
+            const ok = await exportMyData(uid!, email);
+            setDataMsg(ok ? "내 데이터를 파일로 저장했어요." : "내려받지 못했어요. 잠시 후 다시 시도해 주세요.");
+          }}
+          className={`${row} w-full text-left`}
+        >
+          내 데이터 내려받기 <span className="text-muted">›</span>
+        </button>
+        {dataMsg && <p className={`text-sm ${dataMsg.startsWith("내 데이터를") ? "text-sage" : "text-red-600"}`}>{dataMsg}</p>}
+      </div>
+
       <button
         onClick={async () => {
           await unsubscribePush();
@@ -202,6 +237,46 @@ export default function MyPage() {
         className="mt-8 w-full rounded-2xl bg-sand py-3.5 text-sm font-semibold text-ink">
         로그아웃
       </button>
+
+      <div className="mt-8 rounded-2xl border border-line bg-card p-4">
+        <h2 className="text-sm font-bold text-red-600">회원 탈퇴</h2>
+        {!leaving ? (
+          <>
+            <p className="mt-1 text-sm leading-snug text-muted">
+              탈퇴하면 내 글, 사진, 채팅, 관심 목록이 모두 삭제되고 되돌릴 수 없어요. 상대방과 나눈 채팅방도 함께 사라져요.
+            </p>
+            <button onClick={() => setLeaving(true)} className="mt-3 w-full rounded-xl bg-sand py-2.5 text-sm font-semibold text-red-600">
+              탈퇴하기
+            </button>
+          </>
+        ) : (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (leaveText.trim() !== "탈퇴") return;
+              setLeaveBusy(true);
+              setLeaveMsg("");
+              const ok = await deleteMyAccount();
+              setLeaveBusy(false);
+              if (!ok) return setLeaveMsg("탈퇴를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+              router.replace("/login");
+            }}
+            className="mt-2 space-y-2"
+          >
+            <p className="text-sm leading-snug text-muted">확인을 위해 아래 칸에 <b>탈퇴</b>라고 입력해 주세요.</p>
+            <input value={leaveText} onChange={(e) => setLeaveText(e.target.value)} placeholder="탈퇴" className={input} />
+            {leaveMsg && <p className="text-sm text-red-600">{leaveMsg}</p>}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setLeaving(false); setLeaveText(""); }} className="flex-1 rounded-xl bg-sand py-2.5 text-sm font-semibold">
+                취소
+              </button>
+              <button disabled={leaveText.trim() !== "탈퇴" || leaveBusy} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                {leaveBusy ? "처리 중..." : "영구 삭제"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
