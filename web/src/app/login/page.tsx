@@ -35,6 +35,11 @@ export default function LoginPage() {
   const full = typed.includes("@");
   const email = full ? typed : `${typed}@${COMPANY_DOMAIN}`;
   const validId = /^[a-z0-9._+-]+(@[a-z0-9.-]+\.[a-z]{2,})?$/.test(typed);
+  // 흔한 오타(.con, .cmo, gamil 등)를 알려주고 한 번에 고칠 수 있게 함
+  const typoFix = full
+    ? typed.replace(/\.(con|cmo|vom|xom|cim)$/, ".com").replace(/@(gamil|gmial|gmai|gnail)\./, "@gmail.").replace(/@(naver\.(?!com$)[a-z]+|nvaer\.com)$/, "@naver.com")
+    : "";
+  const suggestion = full && typoFix !== typed ? typoFix : "";
 
   function switchMode(m: Mode) {
     setMode(m);
@@ -109,6 +114,15 @@ export default function LoginPage() {
         />
         {!full && <span className="text-base text-muted">@{COMPANY_DOMAIN}</span>}
       </div>
+      {suggestion && (
+        <p className="text-sm text-muted">
+          혹시{" "}
+          <button type="button" onClick={() => setId(suggestion)} className="font-semibold text-brand-dark underline">
+            {suggestion}
+          </button>{" "}
+          아닌가요?
+        </p>
+      )}
     </>
   );
 

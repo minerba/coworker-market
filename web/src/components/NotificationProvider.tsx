@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import Icon from "@/components/Icon";
+import { subscribePush } from "@/lib/push";
 import { supabase } from "@/lib/supabase";
 
 export type AppNotification = {
@@ -25,6 +26,7 @@ type Ctx = {
   markAllRead: () => Promise<void>;
   permission: NotifyPermission;
   requestPermission: () => Promise<NotifyPermission>;
+  pushState: "idle" | "ok" | "failed";
 };
 
 const NotificationContext = createContext<Ctx>({
@@ -34,6 +36,7 @@ const NotificationContext = createContext<Ctx>({
   markAllRead: async () => {},
   permission: "unsupported",
   requestPermission: async () => "unsupported",
+  pushState: "idle",
 });
 export const useNotifications = () => useContext(NotificationContext);
 
@@ -71,6 +74,7 @@ export default function NotificationProvider({ children }: { children: React.Rea
   const [unread, setUnread] = useState<AppNotification[]>([]);
   const [toast, setToast] = useState<AppNotification | null>(null);
   const [permission, setPermission] = useState<NotifyPermission>(readPermission);
+  const [pushState, setPushState] = useState<"idle" | "ok" | "failed">("idle");
   const pathRef = useRef(pathname);
 
   useEffect(() => {
@@ -106,6 +110,18 @@ export default function NotificationProvider({ children }: { children: React.Rea
     };
   }, [uid, refresh]);
 
+  // 알림이 허용된 기기는 로그인할 때마다 푸시 등록을 확인 (앱을 닫아도 알림이 오도록)
+  useEffect(() => {
+    if (!uid || permission !== "granted") return;
+    let cancelled = false;
+    subscribePush().then((ok) => {
+      if (!cancelled) setPushState(ok ? "ok" : "failed");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [uid, permission]);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4500);
@@ -133,8 +149,8 @@ export default function NotificationProvider({ children }: { children: React.Rea
   }, []);
 
   const value = useMemo(
-    () => ({ unread, refresh, markReadByLink, markAllRead, permission, requestPermission }),
-    [unread, refresh, markReadByLink, markAllRead, permission, requestPermission],
+    () => ({ unread, refresh, markReadByLink, markAllRead, permission, requestPermission, pushState }),
+    [unread, refresh, markReadByLink, markAllRead, permission, requestPermission, pushState],
   );
 
   return (

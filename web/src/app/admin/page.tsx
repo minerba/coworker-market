@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { mutate as globalMutate } from "swr";
 import PageHeader from "@/components/PageHeader";
 import { REPORT_REASONS } from "@/components/ReportSheet";
 import { useAuth } from "@/components/AuthProvider";
+import { BUCKET, storagePathFromUrl, withThumbPaths } from "@/lib/image";
 import { supabase } from "@/lib/supabase";
 import { timeAgo } from "@/lib/items";
 
@@ -69,8 +71,13 @@ export default function AdminPage() {
 
   async function removeItem(r: Report) {
     if (!r.item_id || !confirm(`"${r.target_label}" 글을 삭제하고 처리 완료할까요? 되돌릴 수 없어요.`)) return;
+    // 삭제하기 전에 사진 경로를 확보해 두었다가 글을 지운 뒤 사진 파일도 정리
+    const { data: found } = await supabase.from("items").select("image_urls").eq("id", r.item_id).maybeSingle();
     const { error } = await supabase.from("items").delete().eq("id", r.item_id);
     if (error) return setError("글을 삭제하지 못했어요.");
+    const paths = ((found?.image_urls as string[] | undefined) ?? []).map(storagePathFromUrl).filter((p): p is string => !!p);
+    if (paths.length) await supabase.storage.from(BUCKET).remove(withThumbPaths(paths));
+    globalMutate((key) => (Array.isArray(key) && (key[0] === "items" || key[0] === "item" || key[0] === "mine")) || (typeof key === "string" && key.startsWith("$inf$")));
     await setStatus(r, "resolved");
   }
 

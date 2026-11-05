@@ -6,6 +6,7 @@ import useSWR, { mutate as globalMutate } from "swr";
 import { useAuth } from "@/components/AuthProvider";
 import InstallBanner from "@/components/InstallBanner";
 import { useNotifications } from "@/components/NotificationProvider";
+import { unsubscribePush } from "@/lib/push";
 import { fetchBlockedIds } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 
@@ -19,7 +20,7 @@ export default function MyPage() {
   const { session } = useAuth();
   const uid = session?.user.id;
   const email = session?.user.email ?? "";
-  const { permission, requestPermission } = useNotifications();
+  const { permission, requestPermission, pushState } = useNotifications();
 
   const { data: profile, mutate: mutateProfile } = useSWR(uid ? ["profile", uid] : null, async () => {
     const { data } = await supabase.from("profiles").select("nickname, building, is_admin").eq("id", uid!).single();
@@ -135,7 +136,11 @@ export default function MyPage() {
         {permission === "granted" ? (
           <p className="text-sm">
             <span className="font-semibold text-sage">켜져 있어요.</span>
-            <span className="text-muted"> 앱이 백그라운드에 있어도 새 메시지를 알려드려요.</span>
+            <span className="text-muted">
+              {pushState === "failed"
+                ? " 다만 앱을 닫았을 때의 알림 등록에 실패했어요. 잠시 후 앱을 다시 열어 주세요."
+                : " 앱을 닫아도 새 메시지와 관심 알림을 보내드려요."}
+            </span>
           </p>
         ) : permission === "denied" ? (
           <p className="text-sm leading-snug text-muted">알림이 차단되어 있어요. 브라우저(또는 휴대폰) 설정에서 이 사이트의 알림을 허용해 주세요.</p>
@@ -151,7 +156,7 @@ export default function MyPage() {
             </button>
           </div>
         )}
-        <p className="mt-2 text-xs leading-snug text-muted/80">앱을 완전히 닫은 상태의 알림(푸시)은 아직 지원하지 않아요.</p>
+        <p className="mt-2 text-xs leading-snug text-muted/80">알림은 이 기기에서만 켜져요. 다른 기기에서도 받으려면 그 기기에서 켜 주세요.</p>
       </div>
 
       <div className="mt-4 empty:hidden">
@@ -189,7 +194,12 @@ export default function MyPage() {
         </ul>
       )}
 
-      <button onClick={() => supabase.auth.signOut()} className="mt-8 w-full rounded-2xl bg-sand py-3.5 text-sm font-semibold text-ink">
+      <button
+        onClick={async () => {
+          await unsubscribePush();
+          await supabase.auth.signOut();
+        }}
+        className="mt-8 w-full rounded-2xl bg-sand py-3.5 text-sm font-semibold text-ink">
         로그아웃
       </button>
     </div>
