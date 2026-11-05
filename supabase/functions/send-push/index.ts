@@ -1,5 +1,7 @@
-// 웹 푸시 발송 함수
+// 푸시 발송 함수 (웹 푸시 + 앱 푸시)
 // - POST: DB 트리거가 새 알림마다 호출 (x-push-secret 헤더 필요). 해당 사용자의 모든 기기로 푸시 발송
+//         웹 브라우저/PWA는 웹 푸시(VAPID), 안드로이드·iOS 앱은 FCM으로 발송.
+//         FCM은 push_config의 fcm_service_account(Firebase 서비스 계정 JSON)가 설정된 경우에만 동작
 // - GET : 브라우저가 구독할 때 쓰는 공개키 반환 (공개해도 되는 값). 키는 첫 호출 때 자동 생성되어 DB에 저장됨
 // 비밀 키와 공유 비밀값은 public.push_config 테이블에만 있으며 코드/저장소에는 없음
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -44,6 +46,83 @@ async function ensureVapid() {
   return cfg;
 }
 
+// ---- FCM (앱 푸시) ----
+const toB64u = (buf: ArrayBuffer | Uint8Array) => {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+const strB64u = (str: string) => toB64u(new TextEncoder().encode(str));
+
+type ServiceAccount = { project_id: string; client_email: string; private_key: string };
+let fcmToken: { value: string; expires: number } | null = null;
+
+// 서비스 계정으로 FCM 호출용 액세스 토큰을 발급받음 (1시간 캐시)
+async function fcmAccessToken(sa: ServiceAccount): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  if (fcmToken && fcmToken.expires - 60 > now) return fcmToken.value;
+  const header = strB64u(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const claims = strB64u(
+    JSON.stringify({
+      iss: sa.client_email,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+    }),
+  );
+  const pem = sa.private_key.replace(/-----(BEGIN|END) PRIVATE KEY-----/g, "").replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", der, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(`${header}.${claims}`));
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: `${header}.${claims}.${toB64u(sig)}` }),
+  });
+  if (!res.ok) throw new Error(`fcm oauth ${res.status}`);
+  const { access_token, expires_in } = await res.json();
+  fcmToken = { value: access_token, expires: now + (expires_in ?? 3600) };
+  return access_token;
+}
+
+// 앱 기기(안드로이드/iOS)로 발송. 만료된 토큰은 정리. Firebase 설정이 없으면 건너뜀
+async function sendNative(cfg: Record<string, string>, userId: string, title: string, body: string, link: string) {
+  if (!cfg.fcm_service_account) return { sent: 0, removed: 0, skipped: true };
+  const { data: tokens, error } = await db.from("native_push_tokens").select("id,token").eq("user_id", userId);
+  if (error) throw error;
+  if (!tokens || tokens.length === 0) return { sent: 0, removed: 0, skipped: false };
+  const sa = JSON.parse(cfg.fcm_service_account) as ServiceAccount;
+  const access = await fcmAccessToken(sa);
+  let sent = 0;
+  let removed = 0;
+  await Promise.all(
+    tokens.map(async (t) => {
+      const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: {
+            token: t.token,
+            notification: { title, body },
+            data: { link },
+            android: { priority: "HIGH", notification: { tag: link } },
+            apns: { payload: { aps: { sound: "default" } } },
+          },
+        }),
+      });
+      if (res.ok) sent++;
+      else if (res.status === 404) {
+        // 앱이 삭제되었거나 등록 해제된 토큰(UNREGISTERED)만 정리. 400은 요청 형식 오류일 수 있어 지우지 않음
+        await db.from("native_push_tokens").delete().eq("id", t.id);
+        removed++;
+      } else console.error("fcm failed", res.status, (await res.text()).slice(0, 200));
+    }),
+  );
+  return { sent, removed, skipped: false };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
@@ -85,7 +164,14 @@ Deno.serve(async (req) => {
         }
       }),
     );
-    return json({ sent, removed });
+    // 안드로이드/iOS 앱 기기
+    let native = { sent: 0, removed: 0, skipped: true };
+    try {
+      native = await sendNative(cfg, user_id, title, body ?? "", link ?? "/");
+    } catch (e) {
+      console.error("native push error", String(e).slice(0, 200));
+    }
+    return json({ sent, removed, native });
   } catch (e) {
     console.error("send-push error", String(e).slice(0, 300));
     return json({ error: "internal error" }, 500);

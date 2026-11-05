@@ -1,0 +1,37 @@
+# 안드로이드 설치 파일(APK) 자동 빌드. 수동 실행(Actions 탭 → Run workflow) 또는 mobile/ 변경 시 실행
+# 결과물은 실행 결과 화면의 Artifacts에서 내려받을 수 있습니다. (테스트용 debug 빌드)
+name: Android build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: ["mobile/**", ".github/workflows/android-build.yml"]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npx cap sync android
+      - name: Build debug APK
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coworker-market-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk

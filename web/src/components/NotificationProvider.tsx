@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import Icon from "@/components/Icon";
+import { enableNativePush, isNative, nativePushPermission } from "@/lib/native";
 import { subscribePush } from "@/lib/push";
 import { supabase } from "@/lib/supabase";
 
@@ -111,10 +112,17 @@ export default function NotificationProvider({ children }: { children: React.Rea
   }, [uid, refresh]);
 
   // 알림이 허용된 기기는 로그인할 때마다 푸시 등록을 확인 (앱을 닫아도 알림이 오도록)
+  // 앱(안드로이드/iOS) 안에서는 기기의 알림 권한 상태를 따로 확인
+  useEffect(() => {
+    if (!isNative()) return;
+    nativePushPermission().then(setPermission);
+  }, []);
+
   useEffect(() => {
     if (!uid || permission !== "granted") return;
     let cancelled = false;
-    subscribePush().then((ok) => {
+    const run = isNative() ? enableNativePush(false).then((p) => p === "granted") : subscribePush();
+    run.then((ok) => {
       if (!cancelled) setPushState(ok ? "ok" : "failed");
     });
     return () => {
@@ -142,6 +150,11 @@ export default function NotificationProvider({ children }: { children: React.Rea
   }, [refresh]);
 
   const requestPermission = useCallback(async (): Promise<NotifyPermission> => {
+    if (isNative()) {
+      const result = await enableNativePush(true);
+      setPermission(result);
+      return result;
+    }
     if (typeof Notification === "undefined") return "unsupported";
     const result = await Notification.requestPermission();
     setPermission(result);
