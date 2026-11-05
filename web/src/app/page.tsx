@@ -5,6 +5,7 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import ItemCard from "@/components/ItemCard";
 import { useNotifications } from "@/components/NotificationProvider";
+import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { CATEGORIES, ITEM_COLUMNS, type Item } from "@/lib/items";
 
@@ -16,6 +17,14 @@ export default function Home() {
   const [failed, setFailed] = useState(false);
   const [blocked, setBlocked] = useState<Set<string>>(new Set());
   const { unread } = useNotifications();
+  const { session } = useAuth();
+  const [bannerHidden, setBannerHidden] = useState(() => {
+    try {
+      return localStorage.getItem("cm_pw_banner_hidden") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     supabase
@@ -63,6 +72,35 @@ export default function Home() {
         </div>
       </header>
 
+      {session && !session.user.user_metadata?.has_password && !bannerHidden && (
+        <section className="px-5 pb-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-line bg-card p-4">
+            <p className="flex-1 text-sm leading-snug">
+              <span className="font-semibold">비밀번호를 설정해 두세요.</span>
+              <br />
+              <span className="text-muted">다른 기기에서도 인증 메일 없이 로그인할 수 있어요.</span>
+            </p>
+            <Link href="/my" className="shrink-0 rounded-xl bg-brand px-3 py-2 text-sm font-bold text-white">
+              설정
+            </Link>
+            <button
+              aria-label="닫기"
+              onClick={() => {
+                try {
+                  localStorage.setItem("cm_pw_banner_hidden", "1");
+                } catch {
+                  /* 무시 */
+                }
+                setBannerHidden(true);
+              }}
+              className="shrink-0 px-1 text-xl leading-none text-muted"
+            >
+              ×
+            </button>
+          </div>
+        </section>
+      )}
+
       <section className="px-5">
         <div className="rounded-3xl bg-gradient-to-br from-brand-soft to-[#fff1e3] p-5">
           <p className="text-sm font-semibold text-brand-dark">이번 주 나눔</p>
@@ -74,7 +112,7 @@ export default function Home() {
         </div>
       </section>
 
-      <nav className="no-scrollbar mt-5 flex gap-2 overflow-x-auto px-5">
+      <nav className="no-scrollbar mt-4 flex gap-2 overflow-x-auto px-5 py-1">
         {FILTERS.map((c) => (
           <button
             key={c}

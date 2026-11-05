@@ -22,6 +22,7 @@ export default function ItemDetail() {
   const [likeCount, setLikeCount] = useState(0);
   const [chatBusy, setChatBusy] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     supabase
@@ -29,7 +30,8 @@ export default function ItemDetail() {
       .select(ITEM_COLUMNS)
       .eq("id", id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        setLoadError(!!error);
         const found = (data as unknown as Item) ?? null;
         setItem(found);
         setLikeCount(found?.item_likes[0]?.count ?? 0);
@@ -143,7 +145,9 @@ export default function ItemDetail() {
       )}
 
       {item === null ? (
-        <p className="py-20 text-center text-sm text-muted">삭제되었거나 없는 게시글이에요.</p>
+        <p className="py-20 text-center text-sm text-muted">
+          {loadError ? "게시글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : "삭제되었거나 없는 게시글이에요."}
+        </p>
       ) : item ? (
         <div className="px-5 pt-5">
           <div className="flex items-center gap-3 border-b border-line pb-4">
