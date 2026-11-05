@@ -2,9 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { useNotifications } from "@/components/NotificationProvider";
 import PageHeader from "@/components/PageHeader";
+import MoreMenu from "@/components/MoreMenu";
+import ReportSheet from "@/components/ReportSheet";
+import { blockUser } from "@/lib/block";
 import { supabase } from "@/lib/supabase";
 import { CONVERSATION_COLUMNS, type Conversation, type Message } from "@/lib/chat";
 import { won } from "@/lib/items";
@@ -14,8 +18,11 @@ const hhmm = (iso: string) =>
 
 export default function ChatRoom() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [reporting, setReporting] = useState(false);
   const { session } = useAuth();
   const me = session?.user.id;
+  const { unread, markReadByLink } = useNotifications();
   const [room, setRoom] = useState<Conversation | null | undefined>(undefined);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
@@ -53,6 +60,11 @@ export default function ChatRoom() {
     };
   }, [id]);
 
+  // 이 방의 안 읽은 알림은 방에 있는 동안 계속 읽음 처리
+  useEffect(() => {
+    if (unread.some((n) => n.link === `/chat/${id}`)) markReadByLink(`/chat/${id}`);
+  }, [unread, id, markReadByLink]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
@@ -75,10 +87,33 @@ export default function ChatRoom() {
   }
 
   const other = room ? (me === room.buyer_id ? room.seller : room.buyer) : null;
+  const otherId = room ? (me === room.buyer_id ? room.seller_id : room.buyer_id) : null;
+
+  async function block() {
+    if (!otherId || !confirm(`${other?.nickname ?? "이 사용자"}님을 차단할까요? 더 이상 대화할 수 없어요.`)) return;
+    if (await blockUser(otherId)) router.replace("/chat");
+    else alert("차단하지 못했어요. 잠시 후 다시 시도해 주세요.");
+  }
 
   return (
     <div className="flex h-dvh flex-col">
-      <PageHeader title={other?.nickname ?? "채팅"} />
+      <PageHeader
+        title={other?.nickname ?? "채팅"}
+        right={
+          otherId ? (
+            <MoreMenu
+              className="mr-2"
+              actions={[
+                { label: "신고하기", onClick: () => setReporting(true), danger: true },
+                { label: "차단하기", onClick: block },
+              ]}
+            />
+          ) : null
+        }
+      />
+      {reporting && otherId && (
+        <ReportSheet target={{ userId: otherId, label: other?.nickname ?? "사용자" }} onClose={() => setReporting(false)} />
+      )}
       {room === null ? (
         <p className="py-20 text-center text-sm text-muted">접근할 수 없는 채팅방이에요.</p>
       ) : (

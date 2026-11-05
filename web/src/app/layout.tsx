@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import AuthProvider from "@/components/AuthProvider";
+import NotificationProvider from "@/components/NotificationProvider";
 
 export const metadata: Metadata = {
   title: "코워커마켓",
@@ -22,8 +23,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="relative mx-auto min-h-dvh w-full max-w-md bg-cream shadow-[0_0_40px_rgba(120,90,50,0.12)]">
           <Suspense fallback={<div className="min-h-dvh" />}>
             <AuthProvider>
-              <main className="pb-28">{children}</main>
-              <BottomNav />
+              <NotificationProvider>
+                <main className="pb-28">{children}</main>
+                <BottomNav />
+              </NotificationProvider>
             </AuthProvider>
           </Suspense>
         </div>
