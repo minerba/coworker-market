@@ -20,7 +20,7 @@ export type Item = {
 };
 
 export const ITEM_COLUMNS =
-  "id, seller_id, title, description, price, category, place, status, image_urls, created_at, profiles(nickname), item_likes(count)";
+  "id, seller_id, title, description, price, category, place, status, image_urls, created_at, profiles!items_seller_id_fkey(nickname), item_likes(count)";
 
 export const STATUS_LABEL: Record<Status, string> = {
   selling: "판매중",
