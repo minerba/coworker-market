@@ -1,0 +1,28 @@
+# iOS 프로젝트가 컴파일되는지 확인 (서명 없이 시뮬레이터용 빌드). 수동 실행.
+# 실제 기기 설치·TestFlight 배포에는 Apple Developer 계정과 서명 인증서가 필요합니다 (mobile/README.md 참고).
+name: iOS build check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npx cap sync ios
+      - name: Build (no signing, simulator)
+        working-directory: mobile/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build

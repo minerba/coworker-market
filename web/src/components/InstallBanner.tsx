@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isNative } from "@/lib/native";
 import Icon from "./Icon";
 
 type InstallEvent = Event & { prompt: () => Promise<void> };
 
 function isStandalone() {
   return (
+    isNative() ||
     window.matchMedia("(display-mode: standalone)").matches ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true
   );

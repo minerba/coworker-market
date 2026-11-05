@@ -5,6 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import AuthProvider from "@/components/AuthProvider";
 import ConsentGate from "@/components/ConsentGate";
 import NotificationProvider from "@/components/NotificationProvider";
+import NativeShell from "@/components/NativeShell";
 import PwaRegister from "@/components/PwaRegister";
 import SwrProvider from "@/components/SwrProvider";
 
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </Suspense>
         </div>
         <PwaRegister />
+        <NativeShell />
       </body>
     </html>
   );

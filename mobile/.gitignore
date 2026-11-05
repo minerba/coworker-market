@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+# 서명 키·Firebase 설정은 저장소에 올리지 않음
+*.keystore
+*.jks
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
