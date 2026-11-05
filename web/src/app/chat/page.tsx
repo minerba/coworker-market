@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
+import { useNotifications } from "@/components/NotificationProvider";
 import { supabase } from "@/lib/supabase";
 import { CONVERSATION_COLUMNS, type Conversation } from "@/lib/chat";
 import { timeAgo, won } from "@/lib/items";
 
 export default function ChatList() {
   const { session } = useAuth();
+  const { unread } = useNotifications();
+  const unreadLinks = new Set(unread.map((n) => n.link));
   const [rooms, setRooms] = useState<Conversation[] | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -52,7 +55,10 @@ export default function ChatList() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate font-semibold">{other?.nickname ?? "알 수 없음"}</p>
+                    <p className="flex items-center gap-1.5 truncate font-semibold">
+                      {other?.nickname ?? "알 수 없음"}
+                      {unreadLinks.has(`/chat/${r.id}`) && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" aria-label="안 읽은 메시지" />}
+                    </p>
                     <span className="shrink-0 text-xs text-muted">{timeAgo(r.last_message_at)}</span>
                   </div>
                   <p className="truncate text-sm text-muted">{r.last_message || "대화를 시작해 보세요"}</p>

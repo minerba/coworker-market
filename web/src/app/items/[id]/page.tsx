@@ -6,6 +6,9 @@ import { useParams, useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import { useAuth } from "@/components/AuthProvider";
 import ItemThumb from "@/components/ItemThumb";
+import MoreMenu from "@/components/MoreMenu";
+import ReportSheet from "@/components/ReportSheet";
+import { blockUser } from "@/lib/block";
 import { supabase } from "@/lib/supabase";
 import { storagePathFromUrl, BUCKET } from "@/lib/image";
 import { ITEM_COLUMNS, STATUS_LABEL, timeAgo, won, type Item, type Status } from "@/lib/items";
@@ -18,6 +21,7 @@ export default function ItemDetail() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [chatBusy, setChatBusy] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
     supabase
@@ -87,6 +91,12 @@ export default function ItemDetail() {
     if (!error) setItem({ ...item, status });
   }
 
+  async function block() {
+    if (!item || !confirm(`${item.profiles?.nickname ?? "이 사용자"}님을 차단할까요? 이 사용자의 글이 보이지 않고 채팅할 수 없어요.`)) return;
+    if (await blockUser(item.seller_id)) router.replace("/");
+    else alert("차단하지 못했어요. 잠시 후 다시 시도해 주세요.");
+  }
+
   async function remove() {
     if (!item || !confirm("이 게시글을 삭제할까요? 되돌릴 수 없어요.")) return;
     const { error } = await supabase.from("items").delete().eq("id", item.id);
@@ -118,7 +128,19 @@ export default function ItemDetail() {
         >
           <Icon name="back" className="h-5 w-5" strokeWidth={2} />
         </button>
+        {item && !mine && (
+          <MoreMenu
+            className="absolute top-4 right-4"
+            actions={[
+              { label: "신고하기", onClick: () => setReporting(true), danger: true },
+              { label: "판매자 차단", onClick: block },
+            ]}
+          />
+        )}
       </div>
+      {reporting && item && (
+        <ReportSheet target={{ itemId: item.id, label: item.title }} onClose={() => setReporting(false)} />
+      )}
 
       {item === null ? (
         <p className="py-20 text-center text-sm text-muted">삭제되었거나 없는 게시글이에요.</p>

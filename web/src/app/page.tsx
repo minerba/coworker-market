@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Icon from "@/components/Icon";
 import ItemCard from "@/components/ItemCard";
+import { useNotifications } from "@/components/NotificationProvider";
 import { supabase } from "@/lib/supabase";
 import { CATEGORIES, ITEM_COLUMNS, type Item } from "@/lib/items";
 
@@ -12,6 +14,15 @@ export default function Home() {
   const [filter, setFilter] = useState("전체");
   const [items, setItems] = useState<Item[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [blocked, setBlocked] = useState<Set<string>>(new Set());
+  const { unread } = useNotifications();
+
+  useEffect(() => {
+    supabase
+      .from("user_blocks")
+      .select("blocked_id")
+      .then(({ data }) => setBlocked(new Set((data ?? []).map((b) => b.blocked_id as string))));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,9 +49,14 @@ export default function Home() {
               코워커<span className="text-brand">마켓</span>
             </h1>
           </div>
-          <button aria-label="알림" className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-ink shadow-sm ring-1 ring-line">
+          <Link href="/notifications" aria-label="알림" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card text-ink shadow-sm ring-1 ring-line">
             <Icon name="bell" className="h-5 w-5" />
-          </button>
+            {unread.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                {unread.length > 9 ? "9+" : unread.length}
+              </span>
+            )}
+          </Link>
         </div>
         <div className="mt-3 flex items-center gap-2 rounded-2xl bg-sand px-4 py-3 text-sm text-muted">
           <Icon name="search" className="h-5 w-5" /> 필요한 물건을 찾아보세요
@@ -81,13 +97,13 @@ export default function Home() {
           [0, 1, 2].map((i) => <div key={i} className="h-30 animate-pulse rounded-3xl bg-sand" />)
         ) : failed ? (
           <p className="py-16 text-center text-sm text-muted">목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
-        ) : items.length === 0 ? (
+        ) : items.filter((i) => !blocked.has(i.seller_id)).length === 0 ? (
           <div className="py-16 text-center">
             <p className="font-semibold">아직 올라온 물건이 없어요</p>
             <p className="mt-1 text-sm text-muted">첫 번째 물건을 올려 보세요.</p>
           </div>
         ) : (
-          items.map((item) => <ItemCard key={item.id} item={item} />)
+          items.filter((i) => !blocked.has(i.seller_id)).map((item) => <ItemCard key={item.id} item={item} />)
         )}
       </section>
     </>
