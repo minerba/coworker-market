@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "코워커마켓",
+    "slug": "coworker-market",
+    "scheme": "coworkermarket",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#fffaf3",
+    "ios": {
+      "bundleIdentifier": "com.coworkermarket.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.coworkermarket.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#f08a4b",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "softwareKeyboardLayoutMode": "resize",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#fffaf3"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#f08a4b"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "판매할 물건의 사진을 고르기 위해 사진에 접근합니다.",
+          "cameraPermission": "판매할 물건의 사진을 찍기 위해 카메라를 사용합니다."
+        }
+      ]
+    ],
+    "extra": {}
+  }
+}
