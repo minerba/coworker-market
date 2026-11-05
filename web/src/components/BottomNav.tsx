@@ -19,7 +19,7 @@ export default function BottomNav() {
   const chatUnread = unread.filter((n) => n.type === "message").length;
   if (pathname === "/login" || pathname.startsWith("/items/") || pathname === "/sell" || pathname.startsWith("/chat/") || pathname === "/admin" || pathname === "/notifications") return null;
   return (
-    <nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-md -translate-x-1/2 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+    <nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-md -translate-x-1/2 border-t border-line bg-card pb-[env(safe-area-inset-bottom)]">
       <ul className="flex items-end justify-around px-2 pt-2 pb-2">
         {TABS.map((t) => {
           const active = pathname === t.href;

@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
-import { BUCKET, compressImage, storagePathFromUrl } from "@/lib/image";
+import { mutate } from "swr";
+import { BUCKET, processImage, storagePathFromUrl, withThumbPaths } from "@/lib/image";
 import { CATEGORIES, type Category, type Item } from "@/lib/items";
 
 const MAX_IMAGES = 5;
+const invalidateItems = () =>
+  mutate((key) => (Array.isArray(key) && (key[0] === "items" || key[0] === "item" || key[0] === "mine")) || (typeof key === "string" && key.startsWith("$inf$")));
 
 type Photo = { key: string; url: string; file?: File }; // file 없으면 기존 사진
 
@@ -57,12 +60,16 @@ export default function ItemForm({ item }: { item?: Item }) {
           urls.push(p.url);
           continue;
         }
-        const blob = await compressImage(p.file);
-        const path = `${uid}/${crypto.randomUUID()}.jpg`;
-        const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg" });
-        if (error) throw error;
-        uploaded.push(path);
-        urls.push(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl);
+        const { full, thumb } = await processImage(p.file);
+        const base = `${uid}/${crypto.randomUUID()}`;
+        const opts = { contentType: "image/jpeg", cacheControl: "31536000" };
+        const up1 = await supabase.storage.from(BUCKET).upload(`${base}.jpg`, full, opts);
+        if (up1.error) throw up1.error;
+        uploaded.push(`${base}.jpg`);
+        const up2 = await supabase.storage.from(BUCKET).upload(`${base}_t.jpg`, thumb, opts);
+        if (up2.error) throw up2.error;
+        uploaded.push(`${base}_t.jpg`);
+        urls.push(supabase.storage.from(BUCKET).getPublicUrl(`${base}.jpg`).data.publicUrl);
       }
 
       const fields = {
@@ -84,8 +91,9 @@ export default function ItemForm({ item }: { item?: Item }) {
           .filter((u) => !urls.includes(u))
           .map(storagePathFromUrl)
           .filter((p): p is string => !!p);
-        if (removed.length) await supabase.storage.from(BUCKET).remove(removed);
+        if (removed.length) await supabase.storage.from(BUCKET).remove(withThumbPaths(removed));
       }
+      invalidateItems();
       router.replace(`/items/${res.data.id}`);
     } catch {
       // 글 저장에 실패하면 방금 올린 사진도 정리

@@ -47,3 +47,14 @@ body {
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: contain;
+}
+a,
+button,
+input,
+textarea {
+  touch-action: manipulation;
+}

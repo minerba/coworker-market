@@ -1,80 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import useSWR, { mutate as globalMutate } from "swr";
 import Icon from "@/components/Icon";
-import { useAuth } from "@/components/AuthProvider";
 import ItemThumb from "@/components/ItemThumb";
 import MoreMenu from "@/components/MoreMenu";
 import ReportSheet from "@/components/ReportSheet";
 import { blockUser } from "@/lib/block";
+import { useUid } from "@/lib/hooks";
+import { BUCKET, storagePathFromUrl, withThumbPaths } from "@/lib/image";
+import { STATUS_LABEL, timeAgo, won, type Item, type Status } from "@/lib/items";
+import { fetchItem } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
-import { storagePathFromUrl, BUCKET } from "@/lib/image";
-import { ITEM_COLUMNS, STATUS_LABEL, timeAgo, won, type Item, type Status } from "@/lib/items";
+
+// 글이 바뀌면 목록 화면의 캐시도 새로 받도록 표시
+const refreshLists = () =>
+  globalMutate((key) => (Array.isArray(key) && (key[0] === "items" || key[0] === "mine")) || (typeof key === "string" && key.startsWith("$inf$")));
 
 export default function ItemDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { session } = useAuth();
-  const [item, setItem] = useState<Item | null | undefined>(undefined);
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const uid = useUid();
+  const { data: item, error, mutate: mutateItem } = useSWR(["item", id], () => fetchItem(id), { keepPreviousData: false });
+  const { data: liked, mutate: mutateLiked } = useSWR(
+    item && uid ? ["liked", uid, id] : null,
+    async () => {
+      const { data } = await supabase.from("item_likes").select("item_id").eq("item_id", id).eq("user_id", uid!).maybeSingle();
+      return !!data;
+    },
+    { keepPreviousData: false },
+  );
   const [chatBusy, setChatBusy] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
-  useEffect(() => {
-    supabase
-      .from("items")
-      .select(ITEM_COLUMNS)
-      .eq("id", id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        setLoadError(!!error);
-        const found = (data as unknown as Item) ?? null;
-        setItem(found);
-        setLikeCount(found?.item_likes[0]?.count ?? 0);
-      });
-  }, [id]);
-
+  const likeCount = item?.item_likes[0]?.count ?? 0;
   const free = item?.price === 0;
-  const mine = !!item && session?.user.id === item.seller_id;
-
-  useEffect(() => {
-    if (!item || !session) return;
-    supabase
-      .from("item_likes")
-      .select("item_id")
-      .eq("item_id", item.id)
-      .eq("user_id", session.user.id)
-      .maybeSingle()
-      .then(({ data }) => setLiked(!!data));
-  }, [item, session]);
+  const mine = !!item && uid === item.seller_id;
 
   async function toggleLike() {
-    if (!item || !session) return;
+    if (!item || !uid) return;
     const next = !liked;
-    setLiked(next);
-    setLikeCount((c) => c + (next ? 1 : -1));
-    const { error } = next
-      ? await supabase.from("item_likes").insert({ item_id: item.id })
-      : await supabase.from("item_likes").delete().eq("item_id", item.id).eq("user_id", session.user.id);
-    if (error) {
-      setLiked(!next);
-      setLikeCount((c) => c + (next ? -1 : 1));
-    }
+    // 누르는 즉시 화면에 반영하고, 실패하면 되돌림
+    mutateItem(
+      (cur?: Item | null) => (cur ? { ...cur, item_likes: [{ count: Math.max(0, (cur.item_likes[0]?.count ?? 0) + (next ? 1 : -1)) }] } : cur),
+      { revalidate: false },
+    );
+    await mutateLiked(
+      async () => {
+        const res = next
+          ? await supabase.from("item_likes").insert({ item_id: item.id })
+          : await supabase.from("item_likes").delete().eq("item_id", item.id).eq("user_id", uid);
+        if (res.error && res.error.code !== "23505") throw res.error;
+        return next;
+      },
+      { optimisticData: next, rollbackOnError: true, revalidate: false },
+    ).catch(() => mutateItem());
+    globalMutate((key) => Array.isArray(key) && key[0] === "likes");
   }
 
   async function startChat() {
-    if (!item || !session || chatBusy) return;
+    if (!item || !uid || chatBusy) return;
     setChatBusy(true);
-    const existing = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("item_id", item.id)
-      .eq("buyer_id", session.user.id)
-      .maybeSingle();
+    const existing = await supabase.from("conversations").select("id").eq("item_id", item.id).eq("buyer_id", uid).maybeSingle();
     let roomId = existing.data?.id;
     if (!roomId) {
       const created = await supabase.from("conversations").insert({ item_id: item.id }).select("id").single();
@@ -83,6 +73,7 @@ export default function ItemDetail() {
         return alert("채팅을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.");
       }
       roomId = created.data.id;
+      globalMutate((key) => Array.isArray(key) && key[0] === "rooms");
     }
     router.push(`/chat/${roomId}`);
   }
@@ -90,13 +81,17 @@ export default function ItemDetail() {
   async function changeStatus(status: Status) {
     if (!item || status === item.status) return;
     const { error } = await supabase.from("items").update({ status }).eq("id", item.id);
-    if (!error) setItem({ ...item, status });
+    if (error) return alert("상태를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
+    mutateItem((cur?: Item | null) => (cur ? { ...cur, status } : cur), { revalidate: false });
+    refreshLists();
   }
 
   async function block() {
     if (!item || !confirm(`${item.profiles?.nickname ?? "이 사용자"}님을 차단할까요? 이 사용자의 글이 보이지 않고 채팅할 수 없어요.`)) return;
-    if (await blockUser(item.seller_id)) router.replace("/");
-    else alert("차단하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    if (await blockUser(item.seller_id)) {
+      globalMutate((key) => Array.isArray(key) && key[0] === "blocks");
+      router.replace("/");
+    } else alert("차단하지 못했어요. 잠시 후 다시 시도해 주세요.");
   }
 
   async function remove() {
@@ -104,7 +99,8 @@ export default function ItemDetail() {
     const { error } = await supabase.from("items").delete().eq("id", item.id);
     if (error) return alert("삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
     const paths = item.image_urls.map(storagePathFromUrl).filter((p): p is string => !!p);
-    if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+    if (paths.length) await supabase.storage.from(BUCKET).remove(withThumbPaths(paths));
+    refreshLists();
     router.replace("/");
   }
 
@@ -112,21 +108,36 @@ export default function ItemDetail() {
     <div>
       <div className="relative">
         {item && item.image_urls.length > 1 ? (
-          <div className="no-scrollbar flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto">
-            {item.image_urls.map((u) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={u} src={u} alt={item.title} className="h-full w-full shrink-0 snap-center object-cover" />
-            ))}
-          </div>
+          <>
+            <div
+              className="no-scrollbar flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto"
+              onScroll={(e) => setPhotoIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+            >
+              {item.image_urls.map((u, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={u}
+                  src={u}
+                  alt={item.title}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                  className="h-full w-full shrink-0 snap-center object-cover"
+                />
+              ))}
+            </div>
+            <span className="absolute right-4 bottom-3 rounded-full bg-ink/70 px-2.5 py-0.5 text-xs font-medium text-white">
+              {photoIndex + 1} / {item.image_urls.length}
+            </span>
+          </>
         ) : item ? (
-          <ItemThumb item={item} className="aspect-[4/3] w-full" iconClass="h-20 w-20" />
+          <ItemThumb item={item} thumb={false} eager className="aspect-[4/3] w-full" iconClass="h-20 w-20" />
         ) : (
           <div className="aspect-[4/3] w-full animate-pulse bg-sand" />
         )}
         <button
           onClick={() => router.back()}
           aria-label="뒤로"
-          className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-full bg-card/90 text-ink shadow ring-1 ring-line backdrop-blur"
+          className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-full bg-card/90 text-ink shadow ring-1 ring-line"
         >
           <Icon name="back" className="h-5 w-5" strokeWidth={2} />
         </button>
@@ -140,14 +151,17 @@ export default function ItemDetail() {
           />
         )}
       </div>
-      {reporting && item && (
-        <ReportSheet target={{ itemId: item.id, label: item.title }} onClose={() => setReporting(false)} />
-      )}
+      {reporting && item && <ReportSheet target={{ itemId: item.id, label: item.title }} onClose={() => setReporting(false)} />}
 
-      {item === null ? (
-        <p className="py-20 text-center text-sm text-muted">
-          {loadError ? "게시글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : "삭제되었거나 없는 게시글이에요."}
-        </p>
+      {error && !item ? (
+        <div className="py-20 text-center">
+          <p className="text-sm text-muted">게시글을 불러오지 못했어요.</p>
+          <button onClick={() => mutateItem()} className="mt-3 rounded-xl bg-sand px-4 py-2 text-sm font-semibold">
+            다시 시도
+          </button>
+        </div>
+      ) : item === null ? (
+        <p className="py-20 text-center text-sm text-muted">삭제되었거나 없는 게시글이에요.</p>
       ) : item ? (
         <div className="px-5 pt-5">
           <div className="flex items-center gap-3 border-b border-line pb-4">
@@ -163,9 +177,7 @@ export default function ItemDetail() {
           <div className="pt-4">
             <div className="flex items-center gap-2">
               {item.status !== "selling" && (
-                <span className="rounded-full bg-ink px-2.5 py-0.5 text-xs font-medium text-white">
-                  {STATUS_LABEL[item.status]}
-                </span>
+                <span className="rounded-full bg-ink px-2.5 py-0.5 text-xs font-medium text-white">{STATUS_LABEL[item.status]}</span>
               )}
               <span className="text-xs text-muted">
                 {item.category} · {timeAgo(item.created_at)}
@@ -182,9 +194,7 @@ export default function ItemDetail() {
                 <span className="text-xl font-extrabold">{won(item.price)}</span>
               )}
             </p>
-            <p className="mt-5 text-[15px] leading-relaxed whitespace-pre-wrap">
-              {item.description || "설명이 없어요."}
-            </p>
+            <p className="mt-5 text-[15px] leading-relaxed whitespace-pre-wrap">{item.description || "설명이 없어요."}</p>
           </div>
 
           {mine && (
@@ -214,12 +224,12 @@ export default function ItemDetail() {
             </div>
           )}
 
-          <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-line bg-card/95 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-line bg-card px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleLike}
                 aria-label={liked ? "관심 해제" : "관심 등록"}
-                aria-pressed={liked}
+                aria-pressed={!!liked}
                 className={`flex h-12 w-14 shrink-0 flex-col items-center justify-center rounded-2xl ring-1 ring-line ${
                   liked ? "bg-brand-soft text-brand-dark" : "bg-card text-muted"
                 }`}

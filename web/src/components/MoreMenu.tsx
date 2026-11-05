@@ -12,7 +12,7 @@ export default function MoreMenu({ actions, className = "" }: { actions: MenuAct
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="더보기"
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-card/90 text-ink shadow ring-1 ring-line backdrop-blur"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-card/90 text-ink shadow ring-1 ring-line"
       >
         <Icon name="more" className="h-5 w-5" strokeWidth={2.5} />
       </button>

@@ -8,7 +8,7 @@ export default function ItemCard({ item }: { item: Item }) {
   return (
     <Link
       href={`/items/${item.id}`}
-      className="flex gap-3 rounded-3xl border border-line bg-card p-3 shadow-sm shadow-amber-900/5 transition active:scale-[0.99]"
+      className="flex gap-3 rounded-3xl border border-line bg-card p-3 shadow-sm shadow-amber-900/5 [contain-intrinsic-size:auto_120px] [content-visibility:auto] active:bg-sand"
     >
       <div className="relative h-24 w-24 shrink-0">
         <ItemThumb item={item} className="h-24 w-24 rounded-2xl" />
