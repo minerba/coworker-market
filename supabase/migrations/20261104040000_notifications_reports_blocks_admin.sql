@@ -35,14 +35,7 @@ create policy "blocks_insert_own" on public.user_blocks
 create policy "blocks_delete_own" on public.user_blocks
   for delete to authenticated using (blocker_id = (select auth.uid()));
 
--- 내가 차단한 판매자의 글은 목록/상세에서 보이지 않음
-drop policy "items_select_authenticated" on public.items;
-create policy "items_select_not_blocked" on public.items
-  for select to authenticated
-  using (not exists (
-    select 1 from public.user_blocks b
-    where b.blocker_id = (select auth.uid()) and b.blocked_id = items.seller_id
-  ));
+-- (내가 차단한 판매자의 글 숨김은 20261105010000 마이그레이션의 제한 정책으로 처리)
 
 -- 차단 관계(어느 쪽이든)에서는 채팅방 생성/메시지 전송 불가
 create function public.reject_if_blocked(a uuid, b uuid)

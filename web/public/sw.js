@@ -53,7 +53,40 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// 앱이 열려 있는 동안 받은 알림을 시스템 알림으로 보여줄 때, 누르면 해당 화면으로 이동
+// 푸시 수신 (앱이 닫혀 있어도 도착). iOS/크롬 규칙상 푸시마다 알림을 반드시 표시해야 하므로,
+// 앱이 화면에 열려 있을 때는 소리 없이 잠깐 표시했다가 닫음 (앱 안의 알림 배너가 따로 보여줌)
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "코워커마켓", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "코워커마켓";
+  const tag = data.tag || data.link || "coworker-market";
+  event.waitUntil(
+    (async () => {
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const appVisible = wins.some((w) => w.visibilityState === "visible");
+      await self.registration.showNotification(title, {
+        body: data.body || "",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        tag,
+        renotify: !appVisible,
+        silent: appVisible,
+        data: { link: data.link || "/" },
+      });
+      if (appVisible) {
+        await new Promise((r) => setTimeout(r, 1200));
+        const shown = await self.registration.getNotifications({ tag });
+        shown.forEach((n) => n.close());
+      }
+    })(),
+  );
+});
+
+// 알림을 누르면 해당 화면으로 이동
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const link = (event.notification.data && event.notification.data.link) || "/";
