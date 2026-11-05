@@ -112,7 +112,7 @@ export default function Home() {
         </div>
       </section>
 
-      <nav className="no-scrollbar mt-5 flex gap-2 overflow-x-auto px-5">
+      <nav className="no-scrollbar mt-4 flex gap-2 overflow-x-auto px-5 py-1">
         {FILTERS.map((c) => (
           <button
             key={c}
