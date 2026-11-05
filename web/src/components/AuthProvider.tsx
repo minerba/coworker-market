@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { mutate } from "swr";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
@@ -19,7 +20,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setSession(data.session);
       setReady(true);
     });
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      // 로그아웃하면 이전 사용자의 캐시를 모두 비움
+      if (event === "SIGNED_OUT") mutate(() => true, undefined, { revalidate: false });
+      setSession(s);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -32,7 +37,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [ready, session, isLogin, router]);
 
   if (!ready || (!session && !isLogin)) {
-    return <div className="min-h-dvh" aria-busy="true" />;
+    return (
+      <div className="flex min-h-dvh items-center justify-center" aria-busy="true">
+        <span className="text-2xl font-extrabold tracking-tight">
+          코워커<span className="text-brand">마켓</span>
+        </span>
+      </div>
+    );
   }
   return <AuthContext.Provider value={{ session }}>{children}</AuthContext.Provider>;
 }
