@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+dist/
+web-build/
+# 네이티브 프로젝트는 필요할 때 생성(prebuild)하므로 저장소에 두지 않음
+/android
+/ios
+.env
+.env.local
+*.keystore
+*.jks
+*.p8
+*.p12
+*.log
+.DS_Store

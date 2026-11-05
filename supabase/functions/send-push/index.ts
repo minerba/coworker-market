@@ -1,6 +1,6 @@
 // 푸시 발송 함수 (웹 푸시 + 앱 푸시)
 // - POST: DB 트리거가 새 알림마다 호출 (x-push-secret 헤더 필요). 해당 사용자의 모든 기기로 푸시 발송
-//         웹 브라우저/PWA는 웹 푸시(VAPID), 안드로이드·iOS 앱은 FCM으로 발송.
+//         웹 브라우저/PWA는 웹 푸시(VAPID), 네이티브 앱(Expo)은 Expo 푸시 서비스, 하이브리드 앱은 FCM으로 발송.
 //         FCM은 push_config의 fcm_service_account(Firebase 서비스 계정 JSON)가 설정된 경우에만 동작
 // - GET : 브라우저가 구독할 때 쓰는 공개키 반환 (공개해도 되는 값). 키는 첫 호출 때 자동 생성되어 DB에 저장됨
 // 비밀 키와 공유 비밀값은 public.push_config 테이블에만 있으며 코드/저장소에는 없음
@@ -87,12 +87,39 @@ async function fcmAccessToken(sa: ServiceAccount): Promise<string> {
   return access_token;
 }
 
-// 앱 기기(안드로이드/iOS)로 발송. 만료된 토큰은 정리. Firebase 설정이 없으면 건너뜀
-async function sendNative(cfg: Record<string, string>, userId: string, title: string, body: string, link: string) {
-  if (!cfg.fcm_service_account) return { sent: 0, removed: 0, skipped: true };
-  const { data: tokens, error } = await db.from("native_push_tokens").select("id,token").eq("user_id", userId);
-  if (error) throw error;
-  if (!tokens || tokens.length === 0) return { sent: 0, removed: 0, skipped: false };
+type NativeToken = { id: number; token: string };
+
+// Expo 푸시 서비스로 발송 (네이티브 앱). 등록 해제된 기기(DeviceNotRegistered)는 정리
+async function sendExpo(tokens: NativeToken[], title: string, body: string, link: string) {
+  let sent = 0;
+  let removed = 0;
+  for (let i = 0; i < tokens.length; i += 100) {
+    const batch = tokens.slice(i, i + 100);
+    const res = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(batch.map((t) => ({ to: t.token, title, body, data: { link }, sound: "default", channelId: "default", priority: "high" }))),
+    });
+    if (!res.ok) {
+      console.error("expo push failed", res.status, (await res.text()).slice(0, 200));
+      continue;
+    }
+    const { data } = (await res.json()) as { data?: { status: string; details?: { error?: string } }[] };
+    await Promise.all(
+      (data ?? []).map(async (ticket, idx) => {
+        if (ticket.status === "ok") sent++;
+        else if (ticket.details?.error === "DeviceNotRegistered") {
+          await db.from("native_push_tokens").delete().eq("id", batch[idx].id);
+          removed++;
+        } else console.error("expo ticket error", JSON.stringify(ticket).slice(0, 200));
+      }),
+    );
+  }
+  return { sent, removed };
+}
+
+// FCM으로 발송 (하이브리드 앱). 해지된 토큰(404)만 정리. 400은 요청 형식 오류일 수 있어 지우지 않음
+async function sendFcm(cfg: Record<string, string>, tokens: NativeToken[], title: string, body: string, link: string) {
   const sa = JSON.parse(cfg.fcm_service_account) as ServiceAccount;
   const access = await fcmAccessToken(sa);
   let sent = 0;
@@ -114,12 +141,34 @@ async function sendNative(cfg: Record<string, string>, userId: string, title: st
       });
       if (res.ok) sent++;
       else if (res.status === 404) {
-        // 앱이 삭제되었거나 등록 해제된 토큰(UNREGISTERED)만 정리. 400은 요청 형식 오류일 수 있어 지우지 않음
         await db.from("native_push_tokens").delete().eq("id", t.id);
         removed++;
       } else console.error("fcm failed", res.status, (await res.text()).slice(0, 200));
     }),
   );
+  return { sent, removed };
+}
+
+// 앱 기기(안드로이드/iOS)로 발송: Expo 토큰은 Expo 푸시 서비스, 그 외는 FCM(설정된 경우만)
+async function sendNative(cfg: Record<string, string>, userId: string, title: string, body: string, link: string) {
+  const { data: tokens, error } = await db.from("native_push_tokens").select("id,token").eq("user_id", userId);
+  if (error) throw error;
+  if (!tokens || tokens.length === 0) return { sent: 0, removed: 0, skipped: false };
+  const isExpo = (t: NativeToken) => t.token.startsWith("ExponentPushToken[") || t.token.startsWith("ExpoPushToken[");
+  const expo = tokens.filter(isExpo);
+  const fcm = tokens.filter((t) => !isExpo(t));
+  let sent = 0;
+  let removed = 0;
+  if (expo.length) {
+    const r = await sendExpo(expo, title, body, link);
+    sent += r.sent;
+    removed += r.removed;
+  }
+  if (fcm.length && cfg.fcm_service_account) {
+    const r = await sendFcm(cfg, fcm, title, body, link);
+    sent += r.sent;
+    removed += r.removed;
+  }
   return { sent, removed, skipped: false };
 }
 
