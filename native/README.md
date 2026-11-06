@@ -1,4 +1,4 @@
-# 코워커마켓 네이티브 앱 (React Native / Expo)
+# 우리끼리 네이티브 앱 (React Native / Expo)
 
 안드로이드와 iOS에서 **네이티브 화면**으로 동작하는 앱입니다. (`../mobile`은 웹을 감싼 하이브리드 방식이며, 이 앱이 완성되면 대체됩니다.)
 
@@ -57,3 +57,28 @@ npx eas-cli@latest build -p ios --profile production      # Apple Developer 계�
 - 실제 기기·에뮬레이터에서의 실행(빌드와 번들까지만 검증)
 - iOS 빌드
 - 푸시 알림의 실제 수신
+
+## iPhone / 클라우드 빌드 (EAS)
+
+iOS 앱은 Mac 없이 EAS 클라우드로 빌드합니다. 이 저장소의 Linux 환경에서는 iOS를 빌드·실행할 수 없어 **iOS는 아직 검증되지 않았습니다.**
+
+사전 준비 (사람이 해야 하는 것)
+1. Expo 계정 (expo.dev) 생성
+2. Apple Developer Program 가입 (연 $99). 회사 업무용이면 개인/회사 명의를 사내 승인 후 결정
+3. 번들 ID(`com.coworkermarket.app`)는 임시값입니다. 출시 전 확정하세요
+
+순서
+```bash
+cd native
+npm install
+npx eas-cli login
+npx eas-cli init                    # 프로젝트 ID 생성 (app.json에 extra.eas.projectId 추가됨)
+npx eas-cli build -p ios --profile production   # Apple 계정 로그인 시 인증서/프로비저닝 자동 생성
+npx eas-cli submit -p ios           # TestFlight 업로드 (사내 파일럿은 TestFlight 내부 테스터 권장)
+```
+
+Android 설치용 APK: `npx eas-cli build -p android --profile preview`
+
+푸시 알림
+- iOS: `eas build` 중 APNs 키 생성에 동의하면 EAS가 관리합니다.
+- Android: Firebase 프로젝트 생성 후 `google-services.json`과 FCM 자격증명을 `eas credentials`로 등록합니다.

@@ -43,7 +43,7 @@ export default function Home() {
         <View>
           <Text style={T.muted}>우리 회사 이웃들과 함께</Text>
           <Text style={s.logo}>
-            코워커<Text style={{ color: colors.brand }}>마켓</Text>
+            우리<Text style={{ color: colors.brand }}>끼리</Text>
           </Text>
         </View>
         <Pressable onPress={() => router.push("/notifications")} accessibilityLabel="알림" style={s.bell}>

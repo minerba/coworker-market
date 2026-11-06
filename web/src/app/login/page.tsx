@@ -131,7 +131,7 @@ export default function LoginPage() {
     <div className="flex min-h-dvh flex-col justify-center px-6">
       <p className="text-sm text-muted">우리 회사 동료들과 함께</p>
       <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
-        코워커<span className="text-brand">마켓</span>
+        우리<span className="text-brand">끼리</span>
       </h1>
       <p className="mt-3 text-[15px] leading-relaxed text-muted">
         회사 메일로 인증하면 바로 시작할 수 있어요.

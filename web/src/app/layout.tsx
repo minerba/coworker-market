@@ -10,10 +10,10 @@ import PwaRegister from "@/components/PwaRegister";
 import SwrProvider from "@/components/SwrProvider";
 
 export const metadata: Metadata = {
-  title: "코워커마켓",
+  title: "우리끼리",
   description: "동료와 나누고 거래하는 따뜻한 사내 중고마켓",
-  applicationName: "코워커마켓",
-  appleWebApp: { capable: true, title: "코워커마켓", statusBarStyle: "default" },
+  applicationName: "우리끼리",
+  appleWebApp: { capable: true, title: "우리끼리", statusBarStyle: "default" },
   formatDetection: { telephone: false },
   icons: {
     icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],

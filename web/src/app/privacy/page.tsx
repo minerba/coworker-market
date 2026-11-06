@@ -2,7 +2,7 @@ import { H, Legal, Notice, P, UL } from "@/components/Legal";
 import PageHeader from "@/components/PageHeader";
 import { TERMS_VERSION } from "@/lib/legal";
 
-export const metadata = { title: "개인정보 처리방침 · 코워커마켓" };
+export const metadata = { title: "개인정보 처리방침 · 우리끼리" };
 
 export default function PrivacyPage() {
   return (
@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <Legal>
         <Notice>시범 운영 중인 서비스예요. 정식 오픈 전에 내용이 바뀔 수 있고, 바뀌면 다시 동의를 받아요.</Notice>
         <P>
-          코워커마켓(비공식 사내 중고거래 서비스, 이하 &quot;서비스&quot;)은 이용자의 개인정보를 소중히 다루며, 아래와 같이
+          우리끼리(비공식 사내 중고거래 서비스, 이하 &quot;서비스&quot;)는 이용자의 개인정보를 소중히 다루며, 아래와 같이
           처리합니다. 서비스는 회사의 공식 서비스가 아니며 회사와 무관하게 운영자 개인이 운영합니다.
         </P>
 
