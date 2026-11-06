@@ -20,6 +20,8 @@ const invalidateItems = () =>
 
 const uid4 = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+const MAX_PRICE = 100_000_000; // DB 제약(items_price_check)과 같은 값
+
 export default function ItemForm({ item }: { item?: Item }) {
   const router = useRouter();
   const uid = useUid();
@@ -34,7 +36,7 @@ export default function ItemForm({ item }: { item?: Item }) {
   const [error, setError] = useState("");
 
   const priceNum = free ? 0 : Number(price.replace(/\D/g, "") || 0);
-  const valid = title.trim().length > 0 && category !== "" && (free || priceNum > 0);
+  const valid = title.trim().length > 0 && category !== "" && (free || (priceNum > 0 && priceNum <= MAX_PRICE));
 
   function addUris(uris: string[]) {
     setPhotos((prev) => [...prev, ...uris.map((uri) => ({ key: uid4(), uri, existing: false }))].slice(0, MAX_IMAGES));
@@ -181,6 +183,7 @@ export default function ItemForm({ item }: { item?: Item }) {
             keyboardType="number-pad"
             placeholder={free ? "무료로 나눔해요" : "0원"}
           />
+          {!free && priceNum > MAX_PRICE && <Text style={{ color: "#dc2626", fontSize: 12 }}>가격은 1억 원까지 입력할 수 있어요.</Text>}
         </View>
 
         <View style={{ gap: 8 }}>

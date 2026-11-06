@@ -15,6 +15,8 @@ const invalidateItems = () =>
 
 type Photo = { key: string; url: string; file?: File }; // file 없으면 기존 사진
 
+const MAX_PRICE = 100_000_000;
+
 export default function ItemForm({ item }: { item?: Item }) {
   const router = useRouter();
   const { session } = useAuth();
@@ -44,7 +46,7 @@ export default function ItemForm({ item }: { item?: Item }) {
   }
 
   const priceNum = free ? 0 : Number(price.replace(/\D/g, "") || 0);
-  const valid = title.trim().length > 0 && category !== "" && (free || priceNum > 0);
+  const valid = title.trim().length > 0 && category !== "" && (free || (priceNum > 0 && priceNum <= MAX_PRICE));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -199,6 +201,7 @@ export default function ItemForm({ item }: { item?: Item }) {
           />
           {!free && <span className="text-base text-muted">원</span>}
         </div>
+        {!free && priceNum > MAX_PRICE && <p className="mt-2 text-xs text-red-600">가격은 1억 원까지 입력할 수 있어요.</p>}
       </div>
 
       <div>
