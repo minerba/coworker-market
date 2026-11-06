@@ -96,6 +96,17 @@ export default function ItemForm({ item }: { item?: Item }) {
         if (removed.length) await supabase.storage.from(BUCKET).remove(withThumbPaths(removed));
       }
       invalidateItems();
+      if (!item) {
+        // 등록 화면은 뒤에 남아 있을 수 있으므로, 다음에 열었을 때 이전 내용이 보이지 않게 비움
+        setPhotos([]);
+        setTitle("");
+        setCategory("");
+        setFree(false);
+        setPrice("");
+        setPlace("");
+        setDescription("");
+        setBusy(false);
+      }
       router.replace(`/items/${res.data.id}`);
     } catch {
       // 글 저장에 실패하면 방금 올린 사진도 정리
