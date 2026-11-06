@@ -42,7 +42,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     return (
       <div className="flex min-h-dvh items-center justify-center" aria-busy="true">
         <span className="text-2xl font-extrabold tracking-tight">
-          우리<span className="text-brand">끼리</span>
+          우리<span className="text-brand">끼리</span> 중고마켓
         </span>
       </div>
     );

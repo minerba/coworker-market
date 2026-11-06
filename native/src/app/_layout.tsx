@@ -113,7 +113,7 @@ function Gate() {
       {(!ready || waitingConsent) && (
         <View style={s.splash} pointerEvents="none">
           <Text style={s.logo}>
-            우리<Text style={{ color: colors.brand }}>끼리</Text>
+            우리<Text style={{ color: colors.brand }}>끼리</Text> 중고마켓
           </Text>
         </View>
       )}

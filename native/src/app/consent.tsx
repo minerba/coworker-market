@@ -43,7 +43,7 @@ export default function ConsentScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}>
         <Text style={s.title}>시작하기 전에 확인해 주세요</Text>
         <Text style={[T.muted, { marginTop: 8, lineHeight: 20, fontSize: 14 }]}>
-          우리끼리는 회사와 무관한 임직원 사설 서비스예요. 아래 내용에 동의하셔야 사용할 수 있어요.
+          우리끼리 중고마켓은 회사와 무관한 임직원 사설 서비스예요. 아래 내용에 동의하셔야 사용할 수 있어요.
         </Text>
         <View style={{ gap: 8, marginTop: 24 }}>
           <Check checked={terms} onToggle={() => setTerms(!terms)}>

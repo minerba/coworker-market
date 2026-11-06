@@ -22,7 +22,7 @@ export async function exportMyData(uid: string, email: string): Promise<boolean>
       : { data: [] };
     const out = {
       exportedAt: new Date().toISOString(),
-      note: "우리끼리에서 내 계정으로 조회할 수 있는 내 데이터입니다.",
+      note: "우리끼리 중고마켓에서 내 계정으로 조회할 수 있는 내 데이터입니다.",
       account: { id: uid, email },
       profile: profile.data,
       items: items.data,
@@ -33,7 +33,7 @@ export async function exportMyData(uid: string, email: string): Promise<boolean>
       notifications: notifs.data,
       reportsFiled: reports.data,
     };
-    await Share.share({ title: "우리끼리 내 데이터", message: JSON.stringify(out, null, 2) });
+    await Share.share({ title: "우리끼리 중고마켓 내 데이터", message: JSON.stringify(out, null, 2) });
     return true;
   } catch {
     return false;
