@@ -43,9 +43,15 @@ export async function registerForPush(prompt: boolean): Promise<{ permission: Pu
   if (status !== "granted") return { permission: status === "denied" ? "denied" : "default", registered: false };
 
   try {
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-    if (!projectId) return { permission: "granted", registered: false }; // EAS 프로젝트 연결 전에는 토큰을 받을 수 없음
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    let token: string;
+    if (Platform.OS === "android") {
+      // 안드로이드: Firebase(FCM) 토큰을 그대로 등록 (Expo 계정 불필요). google-services.json이 빌드에 포함돼 있어야 함
+      token = (await Notifications.getDevicePushTokenAsync()).data as string;
+    } else {
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+      if (!projectId) return { permission: "granted", registered: false }; // EAS 프로젝트 연결 전에는 토큰을 받을 수 없음
+      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    }
     const { error } = await supabase.rpc("register_native_push_token", { p_token: token, p_platform: Platform.OS });
     if (error) return { permission: "granted", registered: false };
     await AsyncStorage.setItem(TOKEN_KEY, token);
