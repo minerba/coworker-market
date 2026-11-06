@@ -29,7 +29,7 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
     return (
       <div className="flex min-h-dvh items-center justify-center" aria-busy="true">
         <span className="text-2xl font-extrabold tracking-tight">
-          우리<span className="text-brand">끼리</span>
+          우리<span className="text-brand">끼리</span> 중고마켓
         </span>
       </div>
     );
@@ -54,7 +54,7 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
     <div className="flex min-h-dvh flex-col justify-center px-6 py-10">
       <h1 className="text-2xl font-extrabold tracking-tight">시작하기 전에 확인해 주세요</h1>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        우리끼리는 회사와 무관한 임직원 사설 서비스예요. 아래 내용에 동의하셔야 사용할 수 있어요.
+        우리끼리 중고마켓은 회사와 무관한 임직원 사설 서비스예요. 아래 내용에 동의하셔야 사용할 수 있어요.
       </p>
 
       <div className="mt-6 space-y-2">

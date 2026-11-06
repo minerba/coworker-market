@@ -40,5 +40,5 @@
     "export:android": "expo export --platform android"
   },
   "private": true,
-  "description": "우리끼리 네이티브 앱 (React Native / Expo)"
+  "description": "우리끼리 중고마켓 네이티브 앱 (React Native / Expo)"
 }

@@ -2,7 +2,7 @@ import { H, Legal, Notice, P, UL } from "@/components/Legal";
 import PageHeader from "@/components/PageHeader";
 import { TERMS_VERSION } from "@/lib/legal";
 
-export const metadata = { title: "이용약관 · 우리끼리" };
+export const metadata = { title: "이용약관 · 우리끼리 중고마켓" };
 
 export default function TermsPage() {
   return (
@@ -13,7 +13,7 @@ export default function TermsPage() {
 
         <H>제1조 (서비스의 성격)</H>
         <P>
-          우리끼리(이하 &quot;서비스&quot;)는 같은 회사 구성원이 쓰지 않는 개인 물건을 사고팔거나 나눌 수 있도록 돕는{" "}
+          우리끼리 중고마켓(이하 &quot;서비스&quot;)는 같은 회사 구성원이 쓰지 않는 개인 물건을 사고팔거나 나눌 수 있도록 돕는{" "}
           <b>비공식 서비스</b>입니다. 서비스는 회사의 공식 서비스가 아니며, 회사와 무관하게 운영자 개인이 운영합니다.
           이용자는 소속 회사의 사내 규정과 보안 정책을 먼저 지켜야 합니다.
         </P>
