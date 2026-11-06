@@ -1,9 +1,9 @@
-/* 코워커마켓 서비스 워커
+/* 우리끼리 서비스 워커
  * - 정적 파일(/_next/static, 아이콘)은 캐시 우선 → 재방문이 빠름
  * - 화면 이동(HTML)은 네트워크 우선, 오프라인이면 안내 화면
  * - Supabase 등 다른 도메인 요청과 API는 건드리지 않음 (로그인·데이터는 항상 최신)
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `cm-static-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
 
@@ -60,9 +60,9 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "코워커마켓", body: event.data ? event.data.text() : "" };
+    data = { title: "우리끼리", body: event.data ? event.data.text() : "" };
   }
-  const title = data.title || "코워커마켓";
+  const title = data.title || "우리끼리";
   const tag = data.tag || data.link || "coworker-market";
   event.waitUntil(
     (async () => {

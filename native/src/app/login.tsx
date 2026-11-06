@@ -111,7 +111,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
           <Text style={T.muted}>우리 회사 동료들과 함께</Text>
           <Text style={s.logo}>
-            코워커<Text style={{ color: colors.brand }}>마켓</Text>
+            우리<Text style={{ color: colors.brand }}>끼리</Text>
           </Text>
           <Text style={[T.body, { color: colors.muted, marginTop: 12 }]}>
             회사 메일로 인증하면 바로 시작할 수 있어요.{"\n"}동료들끼리만 쓰는 안전한 공간이에요.

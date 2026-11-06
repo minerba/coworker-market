@@ -1,6 +1,6 @@
 import Svg, { Path } from "react-native-svg";
 
-// 코워커마켓 전용 라인 아이콘 세트 (24px 그리드, round cap/join)
+// 우리끼리 전용 라인 아이콘 세트 (24px 그리드, round cap/join)
 const PATHS = {
   home: "M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z",
   search: "M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM15.5 15.5 20 20",

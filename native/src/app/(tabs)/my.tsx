@@ -145,7 +145,7 @@ export default function MyScreen() {
               </Text>
             ) : permission === "denied" ? (
               <View style={{ gap: 10 }}>
-                <Text style={[T.muted, { fontSize: 14, lineHeight: 20 }]}>알림이 차단되어 있어요. 휴대폰 설정에서 코워커마켓의 알림을 허용해 주세요.</Text>
+                <Text style={[T.muted, { fontSize: 14, lineHeight: 20 }]}>알림이 차단되어 있어요. 휴대폰 설정에서 우리끼리의 알림을 허용해 주세요.</Text>
                 <PrimaryButton title="설정 열기" tone="sand" onPress={() => Linking.openSettings()} style={{ minHeight: 44, paddingVertical: 10 }} />
               </View>
             ) : permission === "unsupported" ? (

@@ -1,4 +1,4 @@
-// 코워커마켓 전용 라인 아이콘 세트 (24px 그리드, 1.75 stroke, round cap/join)
+// 우리끼리 전용 라인 아이콘 세트 (24px 그리드, 1.75 stroke, round cap/join)
 const PATHS = {
   camera: "M4 8a1 1 0 0 1 1-1h2.5l1.5-2h6l1.5 2H19a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z",
   close: "M6 6l12 12M18 6 6 18",

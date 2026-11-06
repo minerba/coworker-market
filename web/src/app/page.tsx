@@ -53,7 +53,7 @@ export default function Home() {
           <div>
             <p className="text-xs text-muted">우리 회사 이웃들과 함께</p>
             <h1 className="text-xl font-extrabold tracking-tight">
-              코워커<span className="text-brand">마켓</span>
+              우리<span className="text-brand">끼리</span>
             </h1>
           </div>
           <Link
